@@ -1,0 +1,40 @@
+DNS resolver demo
+  parent server : 127.0.0.1:55555  (zones/example.zone)
+  zone server   : 127.0.0.1:7777   (zones/google.zone)
+  resolver      : 127.0.0.1:12345  (TTL 3 s)
+
+1. First lookup. Nothing is cached, so the resolver asks its parent.
+  query    : biu.ac.il
+  resolver : asking 127.0.0.1:55555 about biu.ac.il
+  answer   : 1.2.3.4
+
+2. The same name again, within the TTL. Answered from the cache.
+  query    : biu.ac.il
+  resolver : cache hit for biu.ac.il
+  answer   : 1.2.3.4
+
+3. A name the parent does not know.
+  query    : www.biu.ac.il
+  resolver : asking 127.0.0.1:55555 about www.biu.ac.il
+  answer   : non-existent domain
+
+4. A name under .co.il. The parent refers the resolver to the zone
+   server, which holds the answer.
+  query    : mail.google.co.il
+  resolver : asking 127.0.0.1:55555 about mail.google.co.il
+  resolver : asking 127.0.0.1:7777 about mail.google.co.il
+  answer   : 1.2.3.9
+
+5. Another name under .co.il. The referral is cached, so the parent
+   is skipped.
+  query    : www.google.co.il
+  resolver : asking 127.0.0.1:7777 about www.google.co.il
+  answer   : 1.2.3.8
+
+(waiting 3.5 s for the cache to expire)
+
+6. After the TTL the cached records are gone. The parent is asked again.
+  query    : www.google.co.il
+  resolver : asking 127.0.0.1:55555 about www.google.co.il
+  resolver : asking 127.0.0.1:7777 about www.google.co.il
+  answer   : 1.2.3.8
