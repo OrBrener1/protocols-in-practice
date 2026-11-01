@@ -130,17 +130,26 @@ def respond(request: Request, root: str) -> Tuple[bytes, int, bool]:
     return build_response(200, headers, body), 200, keep
 
 
-def log(request_line: str, status: int, raw: bytes, verbose: bool) -> None:
-    """One summary line per request; the full request too under --verbose."""
+def log(request_line: str, status: int, raw: bytes, verbose: bool, port: int) -> None:
+    """One summary line per request; under --verbose the full request too, tagged with the
+    client's port so requests can be matched to connections."""
     text = f"{request_line} -> {status}"
     if verbose:
-        text = raw.decode(errors="replace").rstrip() + "\n" + text
+        text = raw.decode(errors="replace").rstrip() + f"\n[{port}] " + text
     print(text, flush=True)  # a single print call, so lines from different threads stay whole
 
 
-def handle_connection(conn: socket.socket, root: str, verbose: bool) -> None:
+def log_connection(port: int, message: str, verbose: bool) -> None:
+    """Under --verbose, report when a connection opens and why it closes."""
+    if verbose:
+        print(f"[{port}] {message}", flush=True)
+
+
+def handle_connection(conn: socket.socket, addr: Tuple[str, int], root: str, verbose: bool) -> None:
     """Serve requests on one connection until it is closed, times out, or breaks."""
+    port = addr[1]
     buffer = b""
+    reason = "client closed it"
     try:
         with conn:
             while True:
@@ -150,16 +159,21 @@ def handle_connection(conn: socket.socket, root: str, verbose: bool) -> None:
                 try:
                     request = parse_request(raw)
                 except ValueError:
-                    log(raw.split(b"\r\n")[0].decode(errors="replace"), 400, raw, verbose)
+                    log(raw.split(b"\r\n")[0].decode(errors="replace"), 400, raw, verbose, port)
                     conn.sendall(build_response(400, [("Connection", "close")]))
+                    reason = "bad request"
                     break
                 response, status, keep = respond(request, root)
-                log(f"{request.method} {request.target}", status, raw, verbose)
+                log(f"{request.method} {request.target}", status, raw, verbose, port)
                 conn.sendall(response)
                 if not keep:
+                    reason = "server closed it (no keep-alive)"
                     break
-    except OSError:  # timeout, connection reset, broken pipe: just drop this connection
-        pass
+    except socket.timeout:
+        reason = f"timeout, no data for {TIMEOUT:g} s"
+    except OSError as exc:  # connection reset, broken pipe: just drop this connection
+        reason = f"error: {exc}"
+    log_connection(port, f"closed ({reason})", verbose)
 
 
 def serve(port: int, root: str, workers: int, verbose: bool) -> None:
@@ -173,10 +187,11 @@ def serve(port: int, root: str, workers: int, verbose: bool) -> None:
     pool = ThreadPoolExecutor(max_workers=workers)
     try:
         while True:
-            conn, _ = server.accept()
+            conn, addr = server.accept()
             conn.settimeout(TIMEOUT)
+            log_connection(addr[1], "opened", verbose)  # logged on accept, even if it has to queue
             # With every worker busy, the connection waits in the pool's queue.
-            pool.submit(handle_connection, conn, root, verbose)
+            pool.submit(handle_connection, conn, addr, root, verbose)
     except KeyboardInterrupt:
         print("\nStopping", flush=True)
     finally:
