@@ -17,6 +17,7 @@ Ports used: 55555 (parent), 7777 (zone server), 12345 (resolver). The zone
 server port must match the NS record in zones/example.zone.
 """
 
+import argparse
 import os
 import queue
 import socket
@@ -129,4 +130,7 @@ def main():
 
 
 if __name__ == "__main__":
+    argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     main()

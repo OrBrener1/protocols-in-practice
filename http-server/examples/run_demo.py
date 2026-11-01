@@ -7,6 +7,7 @@ Usage:
 Nothing else is needed; the demo starts and stops its own server on port 8088.
 """
 
+import argparse
 import os
 import socket
 import subprocess
@@ -111,4 +112,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     main()

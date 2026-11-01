@@ -127,13 +127,35 @@ class Resolver:
                 sock.sendto(self.resolve(domain).encode(), addr)
 
 
+def port_number(value: str) -> int:
+    """argparse type for a port: an integer from 1 to 65535."""
+    try:
+        port = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a number: {value!r}") from None
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError(f"must be between 1 and 65535, got {port}")
+    return port
+
+
+def non_negative_int(value: str) -> int:
+    """argparse type for a number of seconds that cannot be negative."""
+    try:
+        number = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a number: {value!r}") from None
+    if number < 0:
+        raise argparse.ArgumentTypeError(f"cannot be negative, got {number}")
+    return number
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Caching resolver for a small DNS-like protocol over UDP.")
-    parser.add_argument("port", type=int, help="UDP port to listen on")
+    parser.add_argument("port", type=port_number, help="UDP port to listen on")
     parser.add_argument("parent_ip", help="IP address of the parent server")
-    parser.add_argument("parent_port", type=int, help="UDP port of the parent server")
-    parser.add_argument("--ttl", type=int, default=DEFAULT_TTL,
+    parser.add_argument("parent_port", type=port_number, help="UDP port of the parent server")
+    parser.add_argument("--ttl", type=non_negative_int, default=DEFAULT_TTL,
                         help=f"seconds to keep cached records (default {DEFAULT_TTL})")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="log cache hits and upstream queries to stderr")

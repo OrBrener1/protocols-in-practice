@@ -15,6 +15,7 @@ import argparse
 import mimetypes
 import os
 import socket
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, NamedTuple, Optional, Tuple
 from urllib.parse import unquote
@@ -199,12 +200,34 @@ def serve(port: int, root: str, workers: int, verbose: bool) -> None:
         server.close()
 
 
+def port_number(value: str) -> int:
+    """argparse type for a port: an integer from 1 to 65535."""
+    try:
+        port = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a number: {value!r}") from None
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError(f"must be between 1 and 65535, got {port}")
+    return port
+
+
+def positive_int(value: str) -> int:
+    """argparse type for a count that must be at least 1."""
+    try:
+        number = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a number: {value!r}") from None
+    if number < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, got {number}")
+    return number
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Small HTTP/1.1 file server.")
-    parser.add_argument("port", type=int)
+    parser.add_argument("port", type=port_number, help="TCP port to listen on")
     parser.add_argument("--root", default=DEFAULT_ROOT,
                         help="folder to serve (default: 'files' next to this script)")
-    parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS,
+    parser.add_argument("--workers", type=positive_int, default=DEFAULT_WORKERS,
                         help=f"number of worker threads (default: {DEFAULT_WORKERS})")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="print every request in full")
@@ -213,6 +236,8 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if not os.path.isdir(args.root):
+        sys.exit(f"error: not a folder: {args.root}")
     serve(args.port, args.root, args.workers, args.verbose)
 
 

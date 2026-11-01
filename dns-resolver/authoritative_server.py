@@ -93,10 +93,21 @@ def serve(port: int, records: List[Record], verbose: bool) -> None:
             sock.sendto(answer.encode(), addr)
 
 
+def port_number(value: str) -> int:
+    """argparse type for a port: an integer from 1 to 65535."""
+    try:
+        port = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a number: {value!r}") from None
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError(f"must be between 1 and 65535, got {port}")
+    return port
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Authoritative name server for a small DNS-like protocol over UDP.")
-    parser.add_argument("port", type=int, help="UDP port to listen on")
+    parser.add_argument("port", type=port_number, help="UDP port to listen on")
     parser.add_argument("zone_file", help="path to the zone file")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="log every query to stderr")

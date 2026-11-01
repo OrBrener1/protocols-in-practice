@@ -117,10 +117,21 @@ def fetch(sock: Optional[socket.socket], server: Tuple[str, int], path: str,
     return sock, header_lines, body
 
 
+def port_number(value: str) -> int:
+    """argparse type for a port: an integer from 1 to 65535."""
+    try:
+        port = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a number: {value!r}") from None
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError(f"must be between 1 and 65535, got {port}")
+    return port
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Interactive HTTP/1.1 client.")
-    parser.add_argument("server_ip")
-    parser.add_argument("server_port", type=int)
+    parser.add_argument("server_ip", help="IP address of the server")
+    parser.add_argument("server_port", type=port_number, help="TCP port of the server")
     parser.add_argument("--output-dir", default="downloads",
                         help="folder for saved response bodies (default: downloads)")
     return parser.parse_args(argv)
