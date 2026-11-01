@@ -1,0 +1,32 @@
+1. Two requests on one keep-alive connection
+  > GET / HTTP/1.1
+  < HTTP/1.1 200 OK  (374 bytes)  Content-Type: text/html; charset=utf-8
+  > GET /logo.png HTTP/1.1
+  < HTTP/1.1 200 OK  (19875 bytes)  Content-Type: image/png
+2. 'Connection: Close' (any capitalization) ends the connection
+  > GET /result.html HTTP/1.1
+  < HTTP/1.1 200 OK  (272 bytes)  Content-Type: text/html; charset=utf-8
+  server closed the connection: True
+3. Query strings are ignored, a redirect route answers 301
+  > GET /index.html?x=1 HTTP/1.1
+  < HTTP/1.1 200 OK  (374 bytes)  Content-Type: text/html; charset=utf-8
+  > GET /redirect HTTP/1.1
+  < HTTP/1.1 301 Moved Permanently  (0 bytes)  Location: /result.html
+4. Missing file, and a path that tries to leave the served folder
+  > GET /missing.html HTTP/1.1
+  < HTTP/1.1 404 Not Found  (0 bytes)
+  > GET /../http_server.py HTTP/1.1
+  < HTTP/1.1 404 Not Found  (0 bytes)
+  > GET /%2e%2e/http_server.py HTTP/1.1
+  < HTTP/1.1 404 Not Found  (0 bytes)
+5. Only GET is supported
+  > POST /index.html HTTP/1.1
+  < HTTP/1.1 405 Method Not Allowed  (0 bytes)  Allow: GET
+6. A malformed request line gets 400, and the server keeps running
+  > garbage
+  < HTTP/1.1 400 Bad Request  (0 bytes)
+  > GET /result.html HTTP/1.1
+  < HTTP/1.1 200 OK  (272 bytes)  Content-Type: text/html; charset=utf-8
+7. Three idle connections are open, another client is still served
+  > GET /result.html HTTP/1.1
+  < HTTP/1.1 200 OK  (272 bytes)  Content-Type: text/html; charset=utf-8
