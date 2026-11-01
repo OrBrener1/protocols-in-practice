@@ -32,7 +32,7 @@ This repository holds a project I built around two of the central protocols, DNS
 
 I built name resolution on the same principle as DNS, split across three programs. An authoritative server answers from its zone file, a client asks the questions, and between them sits a resolver that walks the hierarchy: it asks the parent server, follows NS referrals to the server that owns the zone, and caches both the answers and the referrals for a set TTL. With the cache in place, a repeated lookup within the TTL is answered locally, and a question about a known zone skips the parent and goes straight to that zone's server.
 
-**[Explore the project →](./dns-resolver)**
+**[Explore the DNS resolver →](./dns-resolver)**
 
 <br>
 
@@ -40,7 +40,7 @@ I built name resolution on the same principle as DNS, split across three program
 
 I wrote an HTTP/1.1 web server and client on top of TCP sockets and handled the protocol by hand: the server parses every request itself and builds each response down to the status line and headers. Connections are served by a pool of worker threads. The need for it became clear in Chrome, which opened a spare connection and left it idle: with a single worker, the next request had nowhere to go.
 
-**[Explore the project →](./http-server)**
+**[Explore the HTTP server →](./http-server)**
 
 <br>
 
